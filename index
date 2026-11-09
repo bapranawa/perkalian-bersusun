@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perkalian Bersusun</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#FFF8E7,#E3F2FD);margin:0;padding:12px;min-height:100vh;color:#2C3E50;text-align:center}
+  .screen{display:none;max-width:560px;margin:0 auto;padding-top:10px}
+  .screen.active{display:block}
+  h1{color:#4A90E2;margin:8px 0 16px;font-size:26px}
+  h2{color:#37474F;font-size:20px;margin:8px 0}
+  .menu-btn{display:block;width:100%;padding:16px;margin:10px 0;font-size:16px;font-weight:600;background:#4A90E2;color:#fff;border:none;border-radius:14px;cursor:pointer;transition:transform .08s;box-shadow:0 4px 0 #2E6FBF;font-family:inherit}
+  .menu-btn:active:not(:disabled){transform:translateY(2px);box-shadow:0 2px 0 #2E6FBF}
+  .menu-btn.green{background:#4CAF50;box-shadow:0 4px 0 #388E3C}
+  .menu-btn.green:active{box-shadow:0 2px 0 #388E3C}
+  .menu-btn.orange{background:#FF9800;box-shadow:0 4px 0 #E65100}
+  .menu-btn.gray{background:#90A4AE;box-shadow:0 4px 0 #607D8B}
+  .menu-btn.locked{background:#CFD8DC;color:#90A4AE;box-shadow:0 4px 0 #B0BEC5;cursor:not-allowed}
+  .menu-btn small{font-size:12px;opacity:.9;display:block;margin-top:4px;font-weight:normal}
+
+  .worksheet-wrap{display:inline-block;margin:16px auto;padding:16px 20px;background:#fff;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+  .worksheet{display:grid;gap:2px}
+  .ws-cell{width:42px;height:52px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;font-family:'Courier New',monospace;border-radius:6px;color:#2C3E50}
+  .ws-cell.empty{background:transparent}
+  .ws-cell.op{font-size:28px;color:#546E7A}
+  .ws-cell.line{height:6px;border-bottom:3px solid #2C3E50;padding:0}
+  .ws-cell.auto{background:#ECEFF1;color:#90A4AE;font-size:22px}
+  .ws-cell.input{border:2px solid #B0BEC5;background:#fff;transition:all .15s;position:relative}
+  .ws-cell.input.active{border-color:#FFC107;background:#FFFDE7;animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 3px #FFE082}50%{box-shadow:0 0 0 7px rgba(255,193,7,.35)}}
+  .ws-cell.input.correct{border-color:#4CAF50;background:#E8F5E9;color:#2E7D32}
+  .ws-cell.input.wrong{border-color:#E74C3C;background:#FFEBEE;animation:shake .35s}
+  .ws-cell.carry-hint{height:20px;font-size:12px;color:#E65100;font-weight:700;align-items:flex-end;padding-bottom:2px}
+  .ws-cell.input input{width:100%;height:100%;border:none;background:transparent;font-size:26px;font-weight:700;font-family:inherit;text-align:center;color:inherit;outline:none;padding:0}
+  .ws-cell.input input:disabled{color:inherit;-webkit-text-fill-color:inherit}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+
+  .top-bar{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:#546E7A;margin-bottom:8px}
+  .progress-bar{height:12px;background:#E0E0E0;border-radius:6px;overflow:hidden;margin-bottom:12px}
+  .progress-fill{height:100%;background:linear-gradient(90deg,#4CAF50,#8BC34A);width:0;transition:width .4s}
+  .soal-banner{display:inline-block;background:#4A90E2;color:#fff;padding:8px 20px;border-radius:20px;font-size:16px;font-weight:600;margin:8px auto}
+  .hint-box{margin:16px auto;padding:12px 16px;background:#FFF3CD;border-left:5px solid #FFC107;border-radius:10px;font-size:14px;text-align:left;max-width:480px;display:none}
+  .hint-box.show{display:block}
+  .hint-box.success{background:#E8F5E9;border-color:#4CAF50;color:#2E7D32}
+  .stars{font-size:52px;margin:16px}
+  .result-title{font-size:26px;margin:16px;color:#4A90E2}
+  .result-msg{font-size:15px;color:#546E7A;margin-bottom:20px}
+  .progress-item{background:#fff;padding:14px 18px;margin:8px 0;border-radius:12px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.05);text-align:left}
+  .stars-badge{color:#FFC107;font-size:18px}
+  .locked-badge{color:#B0BEC5;font-size:13px}
+  @media (max-width:440px){
+    .ws-cell{width:32px;height:42px;font-size:20px}
+    .ws-cell.input input{font-size:20px}
+    .ws-cell.carry-hint{font-size:10px;height:16px}
+    .worksheet-wrap{padding:12px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HOME ============ -->
+<div id="screen-home" class="screen active">
+  <h1>🧮 Perkalian Bersusun</h1>
+  <p style="color:#546E7A">Belajar langkah demi langkah!</p>
+  <div style="margin-top:24px">
+    <button class="menu-btn" onclick="goTo('screen-levels')">🎮 Mulai Latihan</button>
+    <button class="menu-btn gray" onclick="goTo('screen-progress')">📊 Progres Saya</button>
+    <button class="menu-btn gray" onclick="goTo('screen-help')">📖 Cara Bermain</button>
+  </div>
+</div>
+
+<!-- ============ LEVELS ============ -->
+<div id="screen-levels" class="screen">
+  <h1>Pilih Level</h1>
+  <div id="level-list"></div>
+  <button class="menu-btn gray" onclick="goTo('screen-home')" style="margin-top:20px">⬅ Kembali</button>
+</div>
+
+<!-- ============ PRACTICE ============ -->
+<div id="screen-practice" class="screen">
+  <div class="top-bar">
+    <span id="soal-label">Soal 1 dari 5</span>
+    <span id="score-label">⭐ 0</span>
+  </div>
+  <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+  <div class="soal-banner" id="soal-banner">23 × 14 = ?</div>
+  <div class="worksheet-wrap"><div id="worksheet" class="worksheet"></div></div>
+  <div id="hint-box" class="hint-box"></div>
+  <div style="margin-top:12px">
+    <button id="btn-show" class="menu-btn orange" style="display:none" onclick="showAnswer()">👀 Tunjukkan Jawaban</button>
+    <button class="menu-btn gray" onclick="confirmExit()" style="margin-top:8px">🏠 Keluar</button>
+  </div>
+</div>
+
+<!-- ============ RESULT ============ -->
+<div id="screen-result" class="screen">
+  <div id="result-title" class="result-title"></div>
+  <div id="result-stars" class="stars"></div>
+  <div id="result-msg" class="result-msg"></div>
+  <div id="result-buttons"></div>
+</div>
+
+<!-- ============ PROGRESS ============ -->
+<div id="screen-progress" class="screen">
+  <h1>📊 Progres Saya</h1>
+  <div id="progress-list" style="margin-top:16px"></div>
+  <button class="menu-btn gray" onclick="goTo('screen-home')" style="margin-top:20px">⬅ Kembali</button>
+</div>
+
+<!-- ============ HELP ============ -->
+<div id="screen-help" class="screen">
+  <h1>📖 Cara Bermain</h1>
+  <div style="text-align:left;background:#fff;padding:20px;border-radius:16px;line-height:1.7;font-size:15px">
+    <p><b>1.</b> Pilih level.</p>
+    <p><b>2.</b> Isi kotak <b>satu per satu</b> — hanya kotak yang menyala kuning yang bisa diisi.</p>
+    <p><b>3.</b> Benar → hijau & lanjut otomatis. Salah → kotak memerah, coba lagi.</p>
+    <p><b>4.</b> Kalikan dari <b>angka paling kanan</b> dulu. Jika hasil > 9, tulis satuan, simpan puluhan (carry) di atas.</p>
+    <p><b>5.</b> Untuk 2 angka × 2 angka: baris kedua digeser 1 kotak ke kiri, lalu jumlahkan.</p>
+    <p><b>6.</b> Setelah 5 soal → dapat bintang & level berikutnya terbuka 🔓</p>
+  </div>
+  <button class="menu-btn gray" onclick="goTo('screen-home')" style="margin-top:20px">⬅ Kembali</button>
+</div>
+
+<script>
+/* ============================================================
+   STATE
+   ============================================================ */
+const state={
+  level:1, soalIndex:0, totalSoal:5,
+  currentSoal:null, gridData:null,
+  inputOrder:[], currentIndex:0,
+  soalSalahCount:0, sessionStars:0,
+  attemptedShow:false,
+  progress:loadProgress()
+};
+const LEVELS=[
+  {id:1,label:'1 angka × 1 angka',contoh:'7 × 8'},
+  {id:2,label:'2 angka × 1 angka',contoh:'23 × 4'},
+  {id:3,label:'3 angka × 1 angka',contoh:'214 × 6'},
+  {id:4,label:'2 angka × 2 angka',contoh:'23 × 14'},
+  {id:5,label:'3 angka × 2 angka',contoh:'214 × 13'}
+];
+
+/* ============================================================
+   PROGRESS
+   ============================================================ */
+function loadProgress(){
+  try{return JSON.parse(localStorage.getItem('perkalian-progress')||'{}')}catch(e){return{}}
+}
+function saveProgress(){
+  localStorage.setItem('perkalian-progress',JSON.stringify(state.progress));
+}
+
+/* ============================================================
+   ROUTER
+   ============================================================ */
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(id==='screen-levels') renderLevelMenu();
+  if(id==='screen-progress') renderProgressScreen();
+}
+
+/* ============================================================
+   LEVEL MENU
+   ============================================================ */
+function renderLevelMenu(){
+  const c=document.getElementById('level-list'); c.innerHTML='';
+  LEVELS.forEach(lv=>{
+    const btn=document.createElement('button');
+    btn.className='menu-btn';
+    const unlocked = lv.id===1 || (state.progress[lv.id-1]||0)>=1;
+    if(!unlocked){
+      btn.classList.add('locked'); btn.disabled=true;
+      btn.innerHTML=`🔒 Level ${lv.id} — ${lv.label}<br><small>${lv.contoh} — selesaikan level ${lv.id-1} dulu</small>`;
+    } else {
+      btn.innerHTML=`Level ${lv.id} — ${lv.label}<br><small>${lv.contoh}${state.progress[lv.id]?' · ⭐'.repeat(state.progress[lv.id]):''}</small>`;
+      btn.onclick=()=>startLevel(lv.id);
+    }
+    c.appendChild(btn);
+  });
+}
+
+/* ============================================================
+   SOAL GENERATOR
+   ============================================================ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+function generateSoal(level){
+  switch(level){
+    case 1: return {a:rand(2,9),b:rand(2,9)};
+    case 2: return {a:rand(11,49),b:rand(2,9)};
+    case 3: return {a:rand(101,499),b:rand(2,9)};
+    case 4: return {a:rand(11,49),b:rand(11,49)};
+    case 5: return {a:rand(101,499),b:rand(11,49)};
+  }
+}
+
+/* ============================================================
+   BUILD GRID DATA
+   ============================================================ */
+function buildGridData(a,b){
+  const aStr=String(a), bStr=String(b);
+  const aLen=aStr.length, bLen=bStr.length;
+  const rows=[];
+  let width;
+
+  // ---- single partial product (bLen===1) ----
+  if(bLen===1){
+    width=aLen+1;
+    const resultStr=String(a*b).padStart(width,'0');
+    // carry hints row
+    const carryRow=[]; for(let col=0;col<width;col++) carryRow.push({type:'carry',col,value:''});
+    rows.push(carryRow);
+    // a row
+    const aRow=[]; for(let col=0;col<width;col++){
+      const ai=col-(width-aLen);
+      aRow.push(ai>=0?{type:'static',col,value:aStr[ai]}:{type:'empty',col});
+    }
+    rows.push(aRow);
+    // b row
+    const bRow=[]; for(let col=0;col<width;col++){
+      if(col===width-1) bRow.push({type:'op',col,value:'×'});
+      else if(col===width-1+0) bRow.push({type:'static',col,value:bStr[0]});
+      else if(col>width-bLen-1) bRow.push({type:'static',col,value:bStr[col-(width-bLen)]});
+      else bRow.push({type:'empty',col});
+    }
+    // fix b row: b digit at rightmost col, × before it
+    for(let i=0;i<bRow.length;i++) bRow[i]={type:'empty',col:i};
+    bRow[width-2]={type:'op',col:width-2,value:'×'};
+    bRow[width-1]={type:'static',col:width-1,value:bStr[0]};
+    rows.push(bRow);
+    // line
+    rows.push(Array.from({length:width},(_,col)=>({type:'line',col})));
+    // result
+    const resRow=[];
+    for(let col=0;col<width;col++){
+      const digit=resultStr[col];
+      const isLeadingZero=(digit==='0'&&col<width-1&&/^0+$/.test(resultStr.slice(0,col+1)));
+      if(isLeadingZero) resRow.push({type:'auto',col,value:'0'});
+      else resRow.push({type:'input',col,expected:+digit,value:''});
+    }
+    rows.push(resRow);
+  } else {
+    // ---- two partial products ----
+    width=aLen+bLen;
+    const b1=b%10, b10=Math.floor(b/10);
+    const p1=a*b1, p2=a*b10, sum=a*b;
+    const p1Str=String(p1).padStart(aLen+1,'0');
+    const p2Str=String(p2).padStart(aLen+1,'0');
+    const sumStr=String(sum).padStart(width,'0');
+
+    rows.push(Array.from({length:width},(_,col)=>({type:'carry',col,value:''})));
+    // a row
+    const aRow=[]; for(let col=0;col<width;col++){
+      const ai=col-(width-aLen);
+      aRow.push(ai>=0?{type:'static',col,value:aStr[ai]}:{type:'empty',col});
+    }
+    rows.push(aRow);
+    // b row
+    const bRow=Array.from({length:width},(_,col)=>({type:'empty',col}));
+    bRow[width-bLen-1]={type:'op',col:width-bLen-1,value:'×'};
+    for(let i=0;i<bLen;i++) bRow[width-bLen+i]={type:'static',col:width-bLen+i,value:bStr[i]};
+    rows.push(bRow);
+    rows.push(Array.from({length:width},(_,col)=>({type:'line',col})));
+    // p1 row (right-aligned, occupies last aLen+1 cols)
+    const p1Row=Array.from({length:width},(_,col)=>({type:'empty',col}));
+    for(let i=0;i<aLen+1;i++){
+      const col=width-(aLen+1)+i;
+      const digit=p1Str[i];
+      const isLead=(digit==='0'&&i<aLen+1-String(p1).length);
+      p1Row[col]=isLead?{type:'auto',col,value:'0'}:{type:'input',col,expected:+digit,value:''};
+    }
+    rows.push(p1Row);
+    // p2 row (shifted left by 1)
+    const p2Row=Array.from({length:width},(_,col)=>({type:'empty',col}));
+    for(let i=0;i<aLen+1;i++){
+      const col=width-(aLen+1)-1+i;
+      if(col<0||col>=width) continue;
+      const digit=p2Str[i];
+      const isLead=(digit==='0'&&i<aLen+1-String(p2).length);
+      p2Row[col]=isLead?{type:'auto',col,value:'0'}:{type:'input',col,expected:+digit,value:''};
+    }
+    rows.push(p2Row);
+    rows.push(Array.from({length:width},(_,col)=>({type:'line',col})));
+    // sum row
+    const sumRow=[];
+    for(let col=0;col<width;col++){
+      const digit=sumStr[col];
+      const isLead=(digit==='0'&&col<width-1&&/^0+$/.test(sumStr.slice(0,col+1)));
+      sumRow.push(isLead?{type:'auto',col,value:'0'}:{type:'input',col,expected:+digit,value:''});
+    }
+    rows.push(sumRow);
+  }
+
+  // ---- determine input order (right-to-left per row) ----
+  const processRows = bLen===1
+    ? [rows.length-1]
+    : [rows.length-4, rows.length-3, rows.length-1];
+  const inputOrder=[];
+  processRows.forEach(rowIdx=>{
+    const row=rows[rowIdx];
+    const ins=row.filter(c=>c&&c.type==='input');
+    ins.sort((x,y)=>y.col-x.col);
+    ins.forEach(c=>{c.row=rowIdx;c.inputIdx=inputOrder.length;inputOrder.push(c)});
+  });
+
+  // ---- compute carries for L1–L3 (shown above a-row) ----
+  const carries={};
+  if(bLen===1){
+    let carry=0;
+    for(let i=aLen-1;i>=0;i--){
+      const d=+aStr[i];
+      const prod=d*b+carry;
+      carry=Math.floor(prod/10);
+      const C=(width-aLen)+i;
+      if(carry>0 && C>0) carries[C]={toCol:C-1,value:carry};
+    }
+  }
+
+  return {rows,width,height:rows.length,inputOrder,carries,a,b};
+}
+
+/* ============================================================
+   RENDER GRID
+   ============================================================ */
+function renderGrid(g){
+  const ws=document.getElementById('worksheet'); ws.innerHTML='';
+  const cellW = window.innerWidth<440?'32px':'42px';
+  ws.style.gridTemplateColumns=`repeat(${g.width},${cellW})`;
+  for(let r=0;r<g.height;r++){
+    for(let c=0;c<g.width;c++){
+      const cell=g.rows[r][c]||{type:'empty',col:c};
+      const el=document.createElement('div');
+      el.className='ws-cell'; el.dataset.row=r; el.dataset.col=c;
+      if(cell.type==='static'){el.classList.add('static');el.textContent=cell.value}
+      else if(cell.type==='op'){el.classList.add('op');el.textContent=cell.value}
+      else if(cell.type==='line'){el.classList.add('line')}
+      else if(cell.type==='auto'){el.classList.add('auto');el.textContent=cell.value}
+      else if(cell.type==='carry'){el.classList.add('carry-hint');el.textContent=''}
+      else if(cell.type==='input'){
+        el.classList.add('input');
+        const inp=document.createElement('input');
+        inp.type='text'; inp.inputMode='numeric'; inp.maxLength=1;
+        inp.dataset.expected=cell.expected;
+        inp.dataset.inputIdx=cell.inputIdx;
+        inp.disabled=true;
+        inp.addEventListener('input',onInput);
+        inp.addEventListener('keydown',e=>{
+          if(e.key==='Enter'){e.preventDefault();return}
+          if(e.key.length===1&&!/[0-9]/.test(e.key)){e.preventDefault()}
+        });
+        el.appendChild(inp);
+        el.addEventListener('click',()=>{ if(!inp.disabled) inp.focus(); });
+      }
+      ws.appendChild(el);
+    }
+  }
+  activateInput(0);
+}
+
+/* ============================================================
+   INPUT HANDLING
+   ============================================================ */
+function activateInput(idx){
+  document.querySelectorAll('.ws-cell.input').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.ws-cell.input input').forEach(i=>i.disabled=true);
+  if(idx>=state.inputOrder.length) return;
+  const cell=state.inputOrder[idx];
+  const el=document.querySelector(`.ws-cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+  if(!el) return;
+  el.classList.add('active');
+  const inp=el.querySelector('input');
+  if(inp){inp.disabled=false;setTimeout(()=>inp.focus(),30)}
+}
+
+function onInput(e){
+  const inp=e.target;
+  let v=inp.value.replace(/[^0-9]/g,'').slice(-1);
+  inp.value=v;
+  if(v==='') return;
+  const expected=+inp.dataset.expected;
+  const cellEl=inp.closest('.ws-cell');
+  const idx=+inp.dataset.inputIdx;
+
+  if(+v===expected){
+    cellEl.classList.add('correct'); cellEl.classList.remove('active');
+    inp.disabled=true;
+    playTone(880,'sine',.12);
+    // reveal carry hint
+    const cell=state.inputOrder[idx];
+    const carry=state.gridData.carries[cell.col];
+    if(carry){
+      const ch=document.querySelector(`.ws-cell.carry-hint[data-row="0"][data-col="${carry.toCol}"]`);
+      if(ch){ch.textContent=carry.value;ch.style.opacity='1'}
+    }
+    if(idx+1>=state.inputOrder.length){
+      setTimeout(finishSoal,400);
+    } else {
+      setTimeout(()=>activateInput(idx+1),150);
+    }
+  } else {
+    cellEl.classList.add('wrong');
+    inp.value='';
+    playTone(220,'square',.18);
+    state.soalSalahCount++;
+    setTimeout(()=>{cellEl.classList.remove('wrong')},400);
+    const hb=document.getElementById('hint-box');
+    if(state.soalSalahCount===1){
+      hb.textContent='💡 Belum tepat. Hitung ulang dengan teliti ya!';
+      hb.className='hint-box show';
+    } else if(state.soalSalahCount===2){
+      hb.textContent='💡 Petunjuk: kalikan angka kolom ini, lalu tambahkan simpanan (carry) jika ada.';
+      hb.className='hint-box show';
+    } else {
+      hb.textContent='😊 Tidak apa-apa. Klik "Tunjukkan Jawaban" untuk melihat caranya.';
+      hb.className='hint-box show';
+      document.getElementById('btn-show').style.display='block';
+    }
+  }
+}
+
+/* ============================================================
+   SOAL FLOW
+   ============================================================ */
+function startLevel(level){
+  state.level=level;
+  state.soalIndex=0;
+  state.sessionStars=0;
+  nextSoal();
+}
+
+function nextSoal(){
+  if(state.soalIndex>=state.totalSoal){showFinalResult();return}
+  state.currentSoal=generateSoal(state.level);
+  state.soalSalahCount=0;
+  state.attemptedShow=false;
+  state.gridData=buildGridData(state.currentSoal.a,state.currentSoal.b);
+  state.inputOrder=state.gridData.inputOrder;
+
+  document.getElementById('soal-label').textContent=`Soal ${state.soalIndex+1} dari ${state.totalSoal}`;
+  document.getElementById('score-label').textContent=`⭐ ${state.sessionStars}`;
+  document.getElementById('progress-fill').style.width=`${(state.soalIndex/state.totalSoal)*100}%`;
+  document.getElementById('soal-banner').textContent=`${state.currentSoal.a} × ${state.currentSoal.b} = ?`;
+  const hb=document.getElementById('hint-box'); hb.className='hint-box'; hb.textContent='';
+  document.getElementById('btn-show').style.display='none';
+
+  renderGrid(state.gridData);
+  goTo('screen-practice');
+}
+
+function finishSoal(){
+  const stars=state.attemptedShow?0:(state.soalSalahCount===0?3:state.soalSalahCount<=2?2:1);
+  state.sessionStars+=stars;
+  state.soalIndex++;
+  const hb=document.getElementById('hint-box');
+  hb.className='hint-box show success';
+  hb.textContent=stars>0?`🎉 Benar! ${'⭐'.repeat(stars)}`:`✅ Selesai (tanpa bintang karena lihat jawaban).`;
+  document.getElementById('score-label').textContent=`⭐ ${state.sessionStars}`;
+  setTimeout(nextSoal,1100);
+}
+
+function showAnswer(){
+  state.attemptedShow=true;
+  state.inputOrder.forEach(cell=>{
+    const el=document.querySelector(`.ws-cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+    if(!el) return;
+    const inp=el.querySelector('input');
+    if(inp){inp.value=cell.expected;el.classList.add('correct');inp.disabled=true}
+  });
+  document.getElementById('btn-show').style.display='none';
+  const hb=document.getElementById('hint-box');
+  hb.className='hint-box show';
+  hb.textContent=`Jawaban: ${state.currentSoal.a} × ${state.currentSoal.b} = ${state.currentSoal.a*state.currentSoal.b}. Perhatikan langkahnya ya!`;
+  setTimeout(finishSoal,2200);
+}
+
+function confirmExit(){
+  if(confirm('Keluar dari latihan? Progres soal ini akan hilang.')) goTo('screen-levels');
+}
+
+/* ============================================================
+   FINAL RESULT
+   ============================================================ */
+function showFinalResult(){
+  const maxStars=state.totalSoal*3;
+  const pct=state.sessionStars/maxStars;
+  const stars=pct>=.9?3:pct>=.6?2:1;
+  document.getElementById('result-title').textContent=stars>=2?'🏆 Hebat Sekali!':'👍 Latihan Selesai!';
+  document.getElementById('result-stars').textContent='⭐'.repeat(stars);
+  document.getElementById('result-msg').textContent=`Kamu mengumpulkan ${state.sessionStars} bintang dari ${maxStars}.`;
+
+  const prev=state.progress[state.level]||0;
+  state.progress[state.level]=Math.max(prev,stars);
+  saveProgress();
+
+  const btns=document.getElementById('result-buttons'); btns.innerHTML='';
+  const nextLv=state.level+1;
+  if(nextLv<=5 && stars>=1 && (state.progress[state.level]||0)>=1){
+    const b=document.createElement('button');
+    b.className='menu-btn green'; b.textContent=`➡ Coba Level ${nextLv}`;
+    b.onclick=()=>startLevel(nextLv); btns.appendChild(b);
+  }
+  const b2=document.createElement('button');
+  b2.className='menu-btn'; b2.textContent='🔄 Ulangi Level Ini';
+  b2.onclick=()=>startLevel(state.level); btns.appendChild(b2);
+  const b3=document.createElement('button');
+  b3.className='menu-btn gray'; b3.textContent='🏠 Menu Utama';
+  b3.onclick=()=>goTo('screen-home'); btns.appendChild(b3);
+
+  goTo('screen-result');
+}
+
+/* ============================================================
+   PROGRESS SCREEN
+   ============================================================ */
+function renderProgressScreen(){
+  const c=document.getElementById('progress-list'); c.innerHTML='';
+  LEVELS.forEach(lv=>{
+    const s=state.progress[lv.id]||0;
+    const div=document.createElement('div'); div.className='progress-item';
+    div.innerHTML=`
+      <div><b>Level ${lv.id}</b><br><small style="color:#78909C">${lv.label}</small></div>
+      <div class="${s>0?'stars-badge':'locked-badge'}">${s>0?'⭐'.repeat(s):'🔒 Belum'}</div>`;
+    c.appendChild(div);
+  });
+}
+
+/* ============================================================
+   AUDIO
+   ============================================================ */
+let audioCtx=null;
+function playTone(freq,type,dur){
+  try{
+    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(.08,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+renderLevelMenu();
+window.addEventListener('beforeunload',e=>{
+  if(document.getElementById('screen-practice').classList.contains('active')){
+    e.preventDefault(); e.returnValue='';
+  }
+});
+</script>
+</body>
+</html>
